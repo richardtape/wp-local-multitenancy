@@ -42,7 +42,6 @@ read dbusername
 echo "Enter the local database password (will be hidden): "
 read -s dbpassword
 
-
 # Check if the dirctor exists for this domain, if so, bail
 if [ -d "$domain" ]; then
 
@@ -74,10 +73,30 @@ echo -ne "[${checkmark}] Adding index.php\r"
 
 echo ''
 
+# Create the database
+echo -ne "[ ] Create the MySQL Database\r"
+
+# MySQL doesn't like periods in database names from the command line. So let's strip out periods from the domain
+domain_stripped="${domain//./}"
+
+mysql -u root -p${dbpassword} -e "create database ${domain_stripped}" &>/dev/null
+
+echo -ne "[${checkmark}] Create the MySQL Database\r"
+
+echo ''
+
 echo -ne "[ ] Generate a wp-config.php file\r"
 cp -LR wordpress/stable wordpress/workingdir
-wp core config --dbname=${domain} --dbuser=${dbusername} --dbpass=${dbpassword} --path=wordpress/workingdir/stable --skip-check --quiet --extra-php <<PHP
+wp core config --dbname=${domain_stripped} --dbuser=${dbusername} --dbpass=${dbpassword} --path=wordpress/workingdir/stable --skip-check --quiet --extra-php <<PHP
 define( 'WP_CONTENT_DIR', dirname( __FILE__ ) . '/content' );
+define( 'WP_CONTENT_URL', 'http://' . \$_SERVER['HTTP_HOST'] . '/content' );
+define( 'PLUGINDIR', 'content/plugins' );
+
+\$base = isset( \$_SERVER[ 'HTTP_HOST' ] ) ? \$_SERVER[ 'HTTP_HOST' ] : '/';
+define('ADMIN_COOKIE_PATH', '/');
+define('COOKIEPATH', \$base);
+define('SITECOOKIEPATH', \$base);
+define( 'ABSPATH', dirname( __FILE__ ) . '/wp/' );
 PHP
 cp wordpress/workingdir/stable/wp-config.php ${domain}
 rm -rf wordpress/workingdir/stable
@@ -129,7 +148,15 @@ echo "-- Finished setting up {$domain} --"
 
 echo ''
 
-echo "Note: You will need to manually accept the generated SSL certificate if you wish to use https://${localdomain}"
-echo "Note: You will need to restart nginx."
+echo "We will now need to restart nginx. In order to do that we have to use sudo. So you may be prompted for your sudo password..."
+
+echo ''
+
+# At least TRY and restart nginx. This should probably be abstracted out.
+sudo /usr/local/bin/nginx -s reload
+
+echo ''
+
+echo "Note: You will need to manually accept the generated SSL certificate if you wish to use https://${localdomain} in Keychain Access"
 
 echo ''
