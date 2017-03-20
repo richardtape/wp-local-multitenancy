@@ -12,8 +12,8 @@ nginx and mysql installed (probably via brew)
 
 ## What doesn't this do (yet)?
 
-- Create a database on your local machine
-- Restart nginx after all is said and done
+- ~~Create a database on your local machine.~~ UPDATE: It tries to, now. It might not ALWAYS work with some setups.
+- ~~Restart nginx after all is said and done~~ UPDATE: Again, tries to. Will need sudo password so you may be prompted.
 - Make you a cup of coffee (so that probably means @norcross is out)
 
 ## What DOES this do?
@@ -26,7 +26,7 @@ Quite a lot, actually.
 
 - Creating the requisite directories and symlinks
 - Generates a site-specific wp-config.php file based on answers to questions your are prompted, and using wp-cli
-- Generates a site-specific SSL certificate allowing you to use SSL locally
+- Generates a site-specific SSL certificate allowing you to use SSL locally (you'll need to manually accept this in Keychain Access)
 - Adds a site-specific nginx configuration file
 
 ## Usage
@@ -37,7 +37,7 @@ You'll notice that in ./wordpress/ there's a symlink which points to 4.7.2 - tha
 
 Run `./newwp.sh -v 4.7.2` which uses wp-cli to download WordPress version 4.7.2 and place it into ./wordpress/4.7.2/
 
-Your `stable` symlink will now work. (and should you wish to test with other versions of WordPress, you can, by repeating the above with a different version number and then altering the symlink)
+Your `stable` symlink will now work. (and should you wish to test with other versions of WordPress, you can, by repeating the above with a different version number and then altering the symlink or choosing to make it live when prompted)
 
 You may wish to edit the shared/nginx-site-template.conf file to suit your needs. For me, I have a `php-fpm` file which contains
 
@@ -87,3 +87,9 @@ This also assumes you have a `include /usr/local/etc/nginx/sites-enabled/*;` wit
 This is kinda specific right now. But I'm hoping that it will help others and eventually it can be made more generic. It desperately needs some requirement checking and probably some more flexibility. I believe having nginx and mysql installed natively on your machine is the best way forward, rather than using MAMP or VVV or the-like. Products like that are amazing - genuinely - but if they fail, they're devilishly difficult to debug.
 
 Also, probably, with some hardening and after being made more generic, this could be used on a production site after swapping out the SSL generation stuff with Lets Encrypt.
+
+## TODO
+
+1. Use ansible to provision the local setup (nginx, mysql) to make provisioning easier
+2. Use ansible to provision staging/production environments to match and...
+3. Once (2.) is complete, have a way to deploy from local to staging/prod and vice-versa
