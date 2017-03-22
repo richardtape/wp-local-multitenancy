@@ -42,6 +42,25 @@ read dbusername
 echo "Enter the local database password (will be hidden): "
 read -s dbpassword
 
+echo "Would you like to create a github repo for this project? (yes or no): "
+read creategithubrepo
+
+if [ "yes" = $creategithubrepo ]; then
+
+    echo "What is the name of the repo you'd like to make?: "
+    read githubreponame
+
+    # If there is a file at the same level as this called 'githubtoken.txt' read that as the token
+    # otherwise, ask for it
+    if [ -f "${pwd}/githubtoken.txt" ]; then
+        githubaccesstoken=$(<${pwd}/githubtoken.txt)
+    else
+        echo "What is your github access token?: "
+        read githubaccesstoken
+    fi
+
+fi
+
 # Check if the dirctor exists for this domain, if so, bail
 if [ -d "$domain" ]; then
 
@@ -69,7 +88,7 @@ echo ''
 
 echo -ne "[ ] Adding index.php\r"
 cp shared/index.php ${domain}/index.php
-echo -ne "[${checkmark}] Adding index.php\r"
+echo -ne "[${checkmark}] Added index.php\r"
 
 echo ''
 
@@ -81,7 +100,7 @@ domain_stripped="${domain//./}"
 
 mysql -u root -p${dbpassword} -e "create database ${domain_stripped}" &>/dev/null
 
-echo -ne "[${checkmark}] Create the MySQL Database\r"
+echo -ne "[${checkmark}] Created the MySQL Database\r"
 
 echo ''
 
@@ -100,7 +119,7 @@ define( 'ABSPATH', dirname( __FILE__ ) . '/wp/' );
 PHP
 cp wordpress/workingdir/stable/wp-config.php ${domain}
 rm -rf wordpress/workingdir/stable
-echo -ne "[${checkmark}] Generate a wp-config.php file\r"
+echo -ne "[${checkmark}] Generated a wp-config.php file\r"
 
 echo ''
 
@@ -139,9 +158,20 @@ mv ${nginxlocation}/nginx-site-template.conf ${nginxlocation}/${domain}
 sed -i .bak "s/{{LOCALDOMAIN}}/${localdomain}/g" ${nginxlocation}/${domain}
 sed -i .bak "s/{{DOMAINNAME}}/${domain}/g" ${nginxlocation}/${domain}
 rm ${nginxlocation}/${domain}.bak
-echo -ne "[${checkmark}] Adding nginx configuration\r"
+echo -ne "[${checkmark}] Added nginx configuration\r"
 
 echo ''
+
+if [ "yes" = $creategithubrepo ]; then
+
+    echo -ne "[ ] Adding github repo\r"
+    githuburl=$(curl -s "https://api.github.com/user/repos?access_token=${githubaccesstoken}" -d "{\"name\": \"${githubreponame}\", \"description\": \"\", \"private\": false, \"has_issues\": true, \"has_downloads\": true, \"has_wiki\": false}" | jq '.git_url')
+    echo -e "[${checkmark}] Added github repo"
+    echo -ne "[${checkmark}] Added github repo\r"
+
+    cd ${pwd}/${domain}/content && git init && git remote add origin ${githuburl} &>/dev/null
+
+fi
 
 # All done
 echo "-- Finished setting up {$domain} --"
@@ -160,3 +190,7 @@ echo ''
 echo "Note: You will need to manually accept the generated SSL certificate if you wish to use https://${localdomain} in Keychain Access"
 
 echo ''
+
+if [ "yes" = $creategithubrepo ]; then
+    echo "Note: A new github repo has been created and the ${domain}/content directory has been initialized with ${githuburl} as the origin remote."
+fi
